@@ -1,0 +1,47 @@
+## Claude Code Prompts
+
+<!-- format:v2 -->
+
+**Session**: b0280071-2526-4d5c-9200-54ce6bae2ef1
+<!-- continued from session 7fbb6333-cde4-4263-b40d-574d4e87c4c3 -->
+**Slug**: replicated-floating-map
+**Captured**: 2026-02-28T16:23:54Z
+**Branch**: HEAD
+**Model**: claude-opus-4-6
+**Client**: 2.1.63
+**Permission**: accept-edits
+
+### Prompts
+
+**1.** [accept-edits] where is the build binary for be to test?
+
+**2.** [accept-edits] has that binary been rebuilt with the latest features? (base) gilles@mac-1 etincelle % /Users/gilles/Documents/trailblaze/claude-replay/claude-replay --git
+Error: unknown flag: --git
+
+**3.** [accept-edits] did you commit and push the local changes?
+
+**4.** [accept-edits] yes
+
+**5.** [accept-edits] the --git option doesn't seem to work on /Users/gilles/Documents/personal/etincelle despite having definitely automatically committed a session to the claude-sessions branch
+
+**6.** [accept-edits] everywhere
+
+**7.** [Request interrupted by user]
+
+**8.** [accept-edits] no no, I want you to be able to render any session properly. clearly there's a problem here in your animation export logic
+
+**9.** [accept-edits] commit and push
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Turns | 141 user, 194 assistant |
+| Tokens in | 220 |
+| Tokens out | 33,313 |
+| Cache read | 17,037,320 |
+| Cache write | 344,772 |
+
+### Tools
+
+Bash(55) Read(34) TaskUpdate(16) Edit(13) TaskCreate(8) Write(3) Grep(2) Agent(2) TaskOutput(1) AskUserQuestion(1) Glob(1)
