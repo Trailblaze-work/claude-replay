@@ -1,0 +1,11 @@
+## Claude Code Prompts
+
+<!-- format:v2 -->
+
+**Session**: 7fbb6333-cde4-4263-b40d-574d4e87c4c3
+<!-- continued from session c07e7578-9cb8-4046-a2fb-7b307cecbdf9 -->
+**Captured**: 2026-02-28T15:52:56Z
+
+### Prompts
+
+**1.** [accept-edits] the tool should have an alternative operating mode where instead of lising and replaying local sessions, it can also explore and replay sessions that have been store in the current git repo with ../claude-session-trail (only ftching and unzipping the session once it needs to play it)
