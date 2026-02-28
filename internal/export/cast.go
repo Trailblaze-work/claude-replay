@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/trailblaze/claude-replay/internal/session"
 )
 
@@ -22,6 +24,11 @@ type castHeader struct {
 
 // GenerateCast creates an asciinema .cast file from a session.
 func GenerateCast(sess *session.Session, opts Options) error {
+	// Force TrueColor output so lipgloss emits ANSI color codes
+	// even when stdout is not a TTY (writing to a file).
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	lipgloss.SetHasDarkBackground(true)
+
 	f, err := os.Create(opts.Output)
 	if err != nil {
 		return fmt.Errorf("creating output file: %w", err)
@@ -56,16 +63,19 @@ func GenerateCast(sess *session.Session, opts Options) error {
 	var elapsed time.Duration
 
 	for i := range sess.Turns {
-		// Calculate delay
-		var realDuration time.Duration
+		// First frame starts immediately; subsequent frames get a delay
 		if i > 0 {
-			realDuration = sess.Turns[i].Timestamp.Sub(sess.Turns[i-1].Timestamp)
+			realDuration := sess.Turns[i].Timestamp.Sub(sess.Turns[i-1].Timestamp)
+			elapsed += opts.TurnDelay(realDuration, i)
 		}
-		delay := opts.TurnDelay(realDuration, i)
-		elapsed += delay
 
 		// Render frame
 		frame := RenderFrame(sess, i, opts.Width, opts.Height)
+
+		// Replace \n with \r\n for proper terminal rendering.
+		// The cast format bypasses the tty driver's onlcr (NL→CR+NL),
+		// so bare \n only moves the cursor down without returning to column 0.
+		frame = strings.ReplaceAll(frame, "\n", "\r\n")
 
 		// Clear screen + render
 		output := "\033[2J\033[H" + frame

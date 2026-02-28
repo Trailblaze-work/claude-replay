@@ -124,6 +124,45 @@ func TestLoadSession_EmptyFile(t *testing.T) {
 	}
 }
 
+// --- extractToolResultContent tests ---
+
+func TestExtractToolResultContent_String(t *testing.T) {
+	raw := []byte(`"file contents here"`)
+	got := extractToolResultContent(raw)
+	if got != "file contents here" {
+		t.Errorf("got %q, want %q", got, "file contents here")
+	}
+}
+
+func TestExtractToolResultContent_Array(t *testing.T) {
+	raw := []byte(`[{"type":"text","text":"block one"},{"type":"text","text":"block two"}]`)
+	got := extractToolResultContent(raw)
+	if got != "block one\nblock two" {
+		t.Errorf("got %q, want %q", got, "block one\nblock two")
+	}
+}
+
+func TestExtractToolResultContent_Empty(t *testing.T) {
+	got := extractToolResultContent(nil)
+	if got != "" {
+		t.Errorf("got %q, want empty string", got)
+	}
+
+	got = extractToolResultContent([]byte{})
+	if got != "" {
+		t.Errorf("got %q for empty slice, want empty string", got)
+	}
+}
+
+func TestExtractToolResultContent_InvalidJSON(t *testing.T) {
+	raw := []byte(`not json at all`)
+	got := extractToolResultContent(raw)
+	// Falls back to returning raw string
+	if got != "not json at all" {
+		t.Errorf("got %q, want %q", got, "not json at all")
+	}
+}
+
 func TestLoadSession_ToolResultError(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "error.jsonl")

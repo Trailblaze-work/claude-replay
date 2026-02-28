@@ -147,3 +147,112 @@ func TestFindSessionByID(t *testing.T) {
 		t.Error("expected error for nonexistent session")
 	}
 }
+
+// --- countSessions tests ---
+
+func TestCountSessions_Empty(t *testing.T) {
+	dir := t.TempDir()
+	count, latest := countSessions(dir)
+	if count != 0 {
+		t.Errorf("count: got %d, want 0", count)
+	}
+	if !latest.IsZero() {
+		t.Errorf("latest: got %v, want zero time", latest)
+	}
+}
+
+func TestCountSessions_MixedFiles(t *testing.T) {
+	dir := t.TempDir()
+	// Create .jsonl files (should be counted)
+	os.WriteFile(filepath.Join(dir, "session1.jsonl"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(dir, "session2.jsonl"), []byte("{}"), 0644)
+	// Create non-jsonl files (should be ignored)
+	os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("hi"), 0644)
+	os.WriteFile(filepath.Join(dir, "data.json"), []byte("{}"), 0644)
+	// Create a subdirectory (should be ignored)
+	os.MkdirAll(filepath.Join(dir, "subdir"), 0755)
+
+	count, _ := countSessions(dir)
+	if count != 2 {
+		t.Errorf("count: got %d, want 2", count)
+	}
+}
+
+// --- FindSessionByID edge cases ---
+
+func TestFindSessionByID_DirectPath(t *testing.T) {
+	dir := t.TempDir()
+	// FindSessionByID reads the projects dir even for direct paths,
+	// so we need it to exist
+	os.MkdirAll(filepath.Join(dir, "projects"), 0755)
+
+	path := filepath.Join(dir, "direct.jsonl")
+	os.WriteFile(path, []byte(`{"type":"user"}`), 0644)
+
+	got, err := FindSessionByID(dir, path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != path {
+		t.Errorf("got %q, want %q", got, path)
+	}
+}
+
+func TestFindSessionByID_NoProjects(t *testing.T) {
+	dir := t.TempDir()
+	// No "projects" subdirectory exists
+	_, err := FindSessionByID(dir, "some-uuid")
+	if err == nil {
+		t.Error("expected error when projects dir missing")
+	}
+}
+
+// --- LocalSource tests ---
+
+func TestLocalSource_ListProjects(t *testing.T) {
+	dir := t.TempDir()
+	projectsDir := filepath.Join(dir, "projects", "-Users-test-myproject")
+	os.MkdirAll(projectsDir, 0755)
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"role":"user","content":"hello"},"isSidechain":false}
+`
+	os.WriteFile(filepath.Join(projectsDir, "sess-1.jsonl"), []byte(content), 0644)
+
+	src := &LocalSource{ClaudeDir: dir}
+	projects, err := src.ListProjects()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(projects) != 1 {
+		t.Fatalf("expected 1 project, got %d", len(projects))
+	}
+	if projects[0].Name != "myproject" {
+		t.Errorf("name: got %q, want %q", projects[0].Name, "myproject")
+	}
+}
+
+func TestLocalSource_FindSession(t *testing.T) {
+	dir := t.TempDir()
+	projectsDir := filepath.Join(dir, "projects", "-Users-test-proj")
+	os.MkdirAll(projectsDir, 0755)
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"role":"user","content":"hello"},"slug":"find-me","isSidechain":false}
+{"type":"assistant","parentUuid":"u1","uuid":"a1","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"model":"claude-opus-4-6","id":"msg_1","role":"assistant","content":[{"type":"text","text":"hi"}]},"isSidechain":false}
+`
+	os.WriteFile(filepath.Join(projectsDir, "abcd-1234.jsonl"), []byte(content), 0644)
+
+	src := &LocalSource{ClaudeDir: dir}
+	info, err := src.FindSession("abcd-1234")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if info.ID != "abcd-1234" {
+		t.Errorf("ID: got %q, want %q", info.ID, "abcd-1234")
+	}
+	if info.Slug != "find-me" {
+		t.Errorf("Slug: got %q, want %q", info.Slug, "find-me")
+	}
+	if info.TurnCount != 1 {
+		t.Errorf("TurnCount: got %d, want 1", info.TurnCount)
+	}
+}

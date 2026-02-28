@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -193,5 +195,118 @@ func TestParse_SkipsMalformedLines(t *testing.T) {
 	}
 	if len(records) != 1 {
 		t.Fatalf("expected 1 valid record, got %d", len(records))
+	}
+}
+
+// --- QuickScan tests ---
+
+func TestQuickScan_BasicMetadata(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","slug":"my-slug","message":{"role":"user","content":"hello"},"isSidechain":false}
+{"type":"assistant","parentUuid":"u1","uuid":"a1","sessionId":"s1","timestamp":"2026-02-13T12:00:05.000Z","message":{"model":"claude-opus-4-6","id":"msg_1","role":"assistant","content":[{"type":"text","text":"hi"}]},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	slug, model, firstTime, lastTime, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if slug != "my-slug" {
+		t.Errorf("slug: got %q, want %q", slug, "my-slug")
+	}
+	if model != "claude-opus-4-6" {
+		t.Errorf("model: got %q, want %q", model, "claude-opus-4-6")
+	}
+	if firstTime != "2026-02-13T12:00:00.000Z" {
+		t.Errorf("firstTime: got %q", firstTime)
+	}
+	if lastTime != "2026-02-13T12:00:05.000Z" {
+		t.Errorf("lastTime: got %q", lastTime)
+	}
+	if turnCount != 1 {
+		t.Errorf("turnCount: got %d, want 1", turnCount)
+	}
+}
+
+func TestQuickScan_EmptyFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "empty.jsonl")
+	os.WriteFile(path, []byte(""), 0644)
+
+	slug, model, firstTime, lastTime, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if slug != "" || model != "" || firstTime != "" || lastTime != "" {
+		t.Errorf("expected empty strings, got slug=%q model=%q first=%q last=%q", slug, model, firstTime, lastTime)
+	}
+	if turnCount != 0 {
+		t.Errorf("turnCount: got %d, want 0", turnCount)
+	}
+}
+
+func TestQuickScan_OnlyAssistant(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "assistant-only.jsonl")
+
+	content := `{"type":"assistant","parentUuid":"x","uuid":"a1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"model":"claude-opus-4-6","id":"msg_1","role":"assistant","content":[{"type":"text","text":"hi"}]},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	_, _, _, _, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if turnCount != 0 {
+		t.Errorf("turnCount: got %d, want 0 (no user messages)", turnCount)
+	}
+}
+
+func TestQuickScan_MultipleTurns(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "multi.jsonl")
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"role":"user","content":"first"},"isSidechain":false}
+{"type":"assistant","parentUuid":"u1","uuid":"a1","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"model":"claude-opus-4-6","id":"msg_1","role":"assistant","content":[{"type":"text","text":"r1"}]},"isSidechain":false}
+{"type":"user","parentUuid":"a1","uuid":"u2","sessionId":"s1","timestamp":"2026-02-13T12:01:00.000Z","message":{"role":"user","content":"second"},"isSidechain":false}
+{"type":"assistant","parentUuid":"u2","uuid":"a2","sessionId":"s1","timestamp":"2026-02-13T12:01:01.000Z","message":{"model":"claude-opus-4-6","id":"msg_2","role":"assistant","content":[{"type":"text","text":"r2"}]},"isSidechain":false}
+{"type":"user","parentUuid":"a2","uuid":"u3","sessionId":"s1","timestamp":"2026-02-13T12:02:00.000Z","message":{"role":"user","content":"third"},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	_, _, _, _, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if turnCount != 3 {
+		t.Errorf("turnCount: got %d, want 3", turnCount)
+	}
+}
+
+func TestQuickScan_MalformedLines(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "mixed.jsonl")
+
+	content := `not valid json
+{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","slug":"recovered","message":{"role":"user","content":"hello"},"isSidechain":false}
+{broken
+{"type":"assistant","parentUuid":"u1","uuid":"a1","sessionId":"s1","timestamp":"2026-02-13T12:00:05.000Z","message":{"model":"claude-opus-4-6","id":"msg_1","role":"assistant","content":[{"type":"text","text":"hi"}]},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	slug, model, _, _, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if slug != "recovered" {
+		t.Errorf("slug: got %q, want %q", slug, "recovered")
+	}
+	if model != "claude-opus-4-6" {
+		t.Errorf("model: got %q, want %q", model, "claude-opus-4-6")
+	}
+	if turnCount != 1 {
+		t.Errorf("turnCount: got %d, want 1", turnCount)
 	}
 }

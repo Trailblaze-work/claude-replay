@@ -4,36 +4,7 @@ A TUI tool to browse and replay [Claude Code](https://docs.anthropic.com/en/docs
 
 Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss](https://github.com/charmbracelet/lipgloss), and [Glamour](https://github.com/charmbracelet/glamour).
 
-```
- > claude-replay                                       refactor-auth ─ myapp
-────────────────────────────────────────────────────────────────────────────────
-  Turn 3/12  │  claude-sonnet-4-20250514  │  42s  │  2025-06-15 14:23
-
-  You:
-  Can you refactor the auth middleware to use JWT instead of session cookies?
-
-  💭 Thinking (1,247 chars)
-  ▸ Looking at the current auth middleware in middleware/auth.go...
-
-  Claude:
-  I'll refactor the auth middleware to use JWT tokens. Let me start by
-  examining the current implementation and then make the changes.
-
-  > Bash  cat middleware/auth.go
-  ┃ package middleware
-  ┃
-  ┃ func AuthMiddleware(next http.Handler) http.Handler {
-  ┃     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-  ┃ ... 24 more lines
-
-  ~ Edit  middleware/auth.go
-  ┃ -    session, err := store.Get(r, "session-name")
-  ┃ +    tokenString := extractBearerToken(r)
-  ┃ +    claims, err := validateJWT(tokenString)
-
-────────────────────────────────────────────────────────────────────────────────
-  ◀ prev  ██████░░░░░░░░░░░░░░  3/12  ▶ next    t: thinking  ?: help  q: quit
-```
+![demo](demo.gif)
 
 ## Install
 
