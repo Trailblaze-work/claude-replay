@@ -53,14 +53,15 @@ func setupTestGitRepo(t *testing.T) string {
 
 	// Create .meta.json
 	meta := sessionMeta{
-		SessionID: sessionID,
-		Slug:      "test-session",
-		Model:     "claude-sonnet-4-20250514",
-		StartTime: startTime.Format(time.RFC3339Nano),
-		EndTime:   endTime.Format(time.RFC3339Nano),
-		TurnCount: 2,
-		ToolsUsed: []string{"Bash", "Read"},
-		FileSize:  1234,
+		SessionID:      sessionID,
+		Slug:           "test-session",
+		Started:        startTime.Format(time.RFC3339Nano),
+		LastUpdated:    endTime.Format(time.RFC3339Nano),
+		Models:         []string{"claude-sonnet-4-20250514"},
+		UserTurns:      2,
+		AssistantTurns: 2,
+		ToolsUsed:      map[string]int{"Bash": 3, "Read": 1},
+		CompressedSize: 1234,
 	}
 	metaJSON, _ := json.Marshal(meta)
 	os.WriteFile(filepath.Join(sessionsDir, sessionID+".meta.json"), metaJSON, 0644)
@@ -121,14 +122,15 @@ func setupTestGitRepo(t *testing.T) string {
 	// Add a second session
 	sessionID2 := "11111111-2222-3333-4444-555555555555"
 	meta2 := sessionMeta{
-		SessionID: sessionID2,
-		Slug:      "second-session",
-		Model:     "claude-opus-4-20250514",
-		StartTime: endTime.Add(time.Hour).Format(time.RFC3339Nano),
-		EndTime:   endTime.Add(2 * time.Hour).Format(time.RFC3339Nano),
-		TurnCount: 1,
-		ToolsUsed: []string{"Write"},
-		FileSize:  567,
+		SessionID:      sessionID2,
+		Slug:           "second-session",
+		Started:        endTime.Add(time.Hour).Format(time.RFC3339Nano),
+		LastUpdated:    endTime.Add(2 * time.Hour).Format(time.RFC3339Nano),
+		Models:         []string{"claude-opus-4-20250514"},
+		UserTurns:      1,
+		AssistantTurns: 1,
+		ToolsUsed:      map[string]int{"Write": 1},
+		CompressedSize: 567,
 	}
 	metaJSON2, _ := json.Marshal(meta2)
 	os.WriteFile(filepath.Join(sessionsDir, sessionID2+".meta.json"), metaJSON2, 0644)

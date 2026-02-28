@@ -18,14 +18,17 @@ const gitBranch = "claude-sessions"
 
 // sessionMeta mirrors the .meta.json sidecar files on the claude-sessions branch.
 type sessionMeta struct {
-	SessionID  string   `json:"session_id"`
-	Slug       string   `json:"slug"`
-	Model      string   `json:"model"`
-	StartTime  string   `json:"start_time"`
-	EndTime    string   `json:"end_time"`
-	TurnCount  int      `json:"turn_count"`
-	ToolsUsed  []string `json:"tools_used"`
-	FileSize   int64    `json:"file_size"`
+	SessionID      string         `json:"session_id"`
+	Slug           string         `json:"slug"`
+	Started        string         `json:"started"`
+	LastUpdated    string         `json:"last_updated"`
+	Models         []string       `json:"models"`
+	ClientVersion  string         `json:"client_version"`
+	GitBranch      string         `json:"git_branch"`
+	UserTurns      int            `json:"user_turns"`
+	AssistantTurns int            `json:"assistant_turns"`
+	ToolsUsed      map[string]int `json:"tools_used"`
+	CompressedSize int64          `json:"compressed_size"`
 }
 
 // GitSource implements SessionSource by reading from a claude-sessions git branch.
@@ -58,7 +61,7 @@ func (s *GitSource) ListProjects() ([]Project, error) {
 
 	var lastUsed time.Time
 	for _, m := range metas {
-		if t, err := time.Parse(time.RFC3339Nano, m.EndTime); err == nil {
+		if t, err := time.Parse(time.RFC3339Nano, m.LastUpdated); err == nil {
 			if t.After(lastUsed) {
 				lastUsed = t
 			}
@@ -85,20 +88,24 @@ func (s *GitSource) ListSessions(_ string) ([]SessionInfo, error) {
 
 	var sessions []SessionInfo
 	for _, m := range metas {
+		model := ""
+		if len(m.Models) > 0 {
+			model = m.Models[0]
+		}
 		si := SessionInfo{
 			ID:        m.SessionID,
 			Slug:      m.Slug,
-			Model:     m.Model,
-			TurnCount: m.TurnCount,
-			FileSize:  m.FileSize,
+			Model:     model,
+			TurnCount: m.UserTurns,
+			FileSize:  m.CompressedSize,
 		}
-		if m.StartTime != "" {
-			if t, err := time.Parse(time.RFC3339Nano, m.StartTime); err == nil {
+		if m.Started != "" {
+			if t, err := time.Parse(time.RFC3339Nano, m.Started); err == nil {
 				si.FirstTime = t
 			}
 		}
-		if m.EndTime != "" {
-			if t, err := time.Parse(time.RFC3339Nano, m.EndTime); err == nil {
+		if m.LastUpdated != "" {
+			if t, err := time.Parse(time.RFC3339Nano, m.LastUpdated); err == nil {
 				si.LastTime = t
 			}
 		}
