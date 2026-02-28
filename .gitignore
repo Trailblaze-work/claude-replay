@@ -1,0 +1,5 @@
+claude-replay
+*.cast
+*.gif
+*.mp4
+.DS_Store
