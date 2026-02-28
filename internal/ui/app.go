@@ -21,7 +21,8 @@ const (
 // AppModel is the top-level Bubble Tea model.
 type AppModel struct {
 	screen       Screen
-	claudeDir    string
+	source       session.SessionSource
+	skipProjects bool // skip project screen (e.g., git mode with single project)
 	width        int
 	height       int
 
@@ -35,10 +36,21 @@ type AppModel struct {
 }
 
 // NewApp creates the top-level application model.
-func NewApp(claudeDir string) AppModel {
+func NewApp(source session.SessionSource) AppModel {
 	return AppModel{
-		claudeDir: claudeDir,
-		screen:    ScreenProjects,
+		source: source,
+		screen: ScreenProjects,
+	}
+}
+
+// NewAppSkipProjects creates an app that skips the project screen
+// and goes directly to the session list for the given project.
+func NewAppSkipProjects(source session.SessionSource, project session.Project) AppModel {
+	return AppModel{
+		source:         source,
+		screen:         ScreenSessions,
+		skipProjects:   true,
+		currentProject: project,
 	}
 }
 
@@ -71,6 +83,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ScreenProjects:
 			return m, m.loadProjects()
 		case ScreenSessions:
+			if m.skipProjects {
+				return m, m.loadSessions(m.currentProject.DirPath)
+			}
 			m.sessionList, _ = m.sessionList.Update(msg)
 		case ScreenReplay:
 			var cmd tea.Cmd
@@ -110,9 +125,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.loadSessions(msg.Project.DirPath)
 
 	case browse.SessionSelected:
-		return m, m.loadSession(msg.Session.Path)
+		return m, m.loadSession(msg.Session.ID)
 
 	case browse.GoBack:
+		if m.skipProjects {
+			return m, tea.Quit
+		}
 		m.screen = ScreenProjects
 		return m, m.loadProjects()
 
@@ -159,21 +177,21 @@ func (m AppModel) View() string {
 
 func (m AppModel) loadProjects() tea.Cmd {
 	return func() tea.Msg {
-		projects, err := session.DiscoverProjects(m.claudeDir)
+		projects, err := m.source.ListProjects()
 		return projectsLoadedMsg{projects: projects, err: err}
 	}
 }
 
-func (m AppModel) loadSessions(dirPath string) tea.Cmd {
+func (m AppModel) loadSessions(projectID string) tea.Cmd {
 	return func() tea.Msg {
-		sessions, err := session.DiscoverSessions(dirPath)
+		sessions, err := m.source.ListSessions(projectID)
 		return sessionsLoadedMsg{sessions: sessions, err: err}
 	}
 }
 
-func (m AppModel) loadSession(path string) tea.Cmd {
+func (m AppModel) loadSession(sessionID string) tea.Cmd {
 	return func() tea.Msg {
-		sess, err := session.LoadSession(path)
+		sess, err := m.source.LoadSession(sessionID)
 		return sessionLoadedMsg{session: sess, err: err}
 	}
 }

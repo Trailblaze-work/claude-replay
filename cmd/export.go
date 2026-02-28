@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/trailblaze/claude-replay/internal/export"
-	"github.com/trailblaze/claude-replay/internal/session"
 )
 
 var (
@@ -26,13 +25,13 @@ var exportCmd = &cobra.Command{
 		query := args[0]
 
 		// Find the session
-		path, err := session.FindSessionByID(claudeDir, query)
+		info, err := source.FindSession(query)
 		if err != nil {
 			return fmt.Errorf("finding session: %w", err)
 		}
 
 		// Load it
-		sess, err := session.LoadSession(path)
+		sess, err := source.LoadSession(info.ID)
 		if err != nil {
 			return fmt.Errorf("loading session: %w", err)
 		}

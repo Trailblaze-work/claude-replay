@@ -5,7 +5,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
-	"github.com/trailblaze/claude-replay/internal/session"
 	"github.com/trailblaze/claude-replay/internal/ui/replay"
 )
 
@@ -36,12 +35,12 @@ var playCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		query := args[0]
 
-		path, err := session.FindSessionByID(claudeDir, query)
+		info, err := source.FindSession(query)
 		if err != nil {
 			return fmt.Errorf("finding session: %w", err)
 		}
 
-		sess, err := session.LoadSession(path)
+		sess, err := source.LoadSession(info.ID)
 		if err != nil {
 			return fmt.Errorf("loading session: %w", err)
 		}
