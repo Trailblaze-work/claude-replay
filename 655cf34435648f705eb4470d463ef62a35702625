@@ -1,0 +1,32 @@
+## Claude Code Prompts
+
+<!-- format:v2 -->
+
+**Session**: 7fbb6333-cde4-4263-b40d-574d4e87c4c3
+<!-- continued from session c07e7578-9cb8-4046-a2fb-7b307cecbdf9 -->
+**Slug**: replicated-floating-map
+**Captured**: 2026-02-28T15:58:26Z
+**Branch**: HEAD
+**Model**: claude-opus-4-6
+**Client**: 2.1.63
+**Permission**: accept-edits
+
+### Prompts
+
+**1.** [accept-edits] the tool should have an alternative operating mode where instead of lising and replaying local sessions, it can also explore and replay sessions that have been store in the current git repo with ../claude-session-trail (only ftching and unzipping the session once it needs to play it)
+
+**2.** [accept-edits] the --git option doesn't seem to work on /Users/gilles/Documents/personal/etincelle despite having definitely automatically committed a session to the claude-sessions branch
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Turns | 20 user, 36 assistant |
+| Tokens in | 42 |
+| Tokens out | 4,825 |
+| Cache read | 2,751,816 |
+| Cache write | 27,082 |
+
+### Tools
+
+Bash(12) Edit(5) Read(2)
