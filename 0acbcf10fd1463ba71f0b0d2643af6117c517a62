@@ -1,0 +1,11 @@
+## Claude Code Prompts
+
+<!-- format:v2 -->
+
+**Session**: c07e7578-9cb8-4046-a2fb-7b307cecbdf9
+<!-- continued from session 25cb637f-a0db-49d2-8ac6-a93e1b47cc1f -->
+**Captured**: 2026-02-28T15:30:09Z
+
+### Prompts
+
+**1.** I want you to start a new project, create a folder for it here + git repo. I want you to create a Claude session replay CLI. Something that lets you explore all the projects and corresponding sessions you've had with Claude Code in your .claude folder (or optionally, the folder of your choice). And it will replay the session in an accurate way that looks like you're inside Claude Code. Then you can skip back and forth through the whole session to see what happened. There can also be an option to export a video of the session, either playing out in real time or skipping the different waiting periods, have different options for this that make sense. Pick the language that is the most appropriate and efficient to do this.
