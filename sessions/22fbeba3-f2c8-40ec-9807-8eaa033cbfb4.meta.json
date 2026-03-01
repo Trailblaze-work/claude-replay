@@ -1,0 +1,22 @@
+{
+  "session_id": "22fbeba3-f2c8-40ec-9807-8eaa033cbfb4",
+  "slug": "lovely-foraging-robin",
+  "started": "2026-03-01T20:23:54.474Z",
+  "last_updated": "2026-03-01T20:31:25.239Z",
+  "models": [
+    "claude-opus-4-6"
+  ],
+  "client_version": "2.1.63",
+  "git_branch": "main",
+  "user_turns": 13,
+  "assistant_turns": 21,
+  "commits": [],
+  "tools_used": {
+    "EnterPlanMode": 1,
+    "Agent": 3,
+    "Read": 5,
+    "Write": 1,
+    "ExitPlanMode": 1
+  },
+  "compressed_size": 109513
+}
