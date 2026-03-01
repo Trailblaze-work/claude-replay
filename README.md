@@ -82,7 +82,7 @@ Play the recording with `asciinema play session.cast` or upload to [asciinema.or
 | `↑/k` `↓/j` | Scroll within turn |
 | `PgUp` `PgDn` | Page up/down |
 | `t` | Toggle thinking blocks |
-| `Enter` | Expand/collapse tool results |
+| `Enter` | Expand/collapse tool details |
 | `Space` | Toggle autoplay |
 | `+/-` | Adjust autoplay speed |
 | `?` | Help overlay |
