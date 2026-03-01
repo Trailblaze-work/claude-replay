@@ -114,7 +114,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case key.Matches(msg, theme.DefaultKeyMap.ExpandTool):
 			turn := m.session.Turns[m.currentTurn]
 			for _, block := range turn.Blocks {
-				if block.Type == session.BlockToolResult && block.ToolID != "" {
+				if (block.Type == session.BlockToolUse || block.Type == session.BlockToolResult) && block.ToolID != "" {
 					m.expandedTools[block.ToolID] = !m.expandedTools[block.ToolID]
 				}
 			}
@@ -211,7 +211,7 @@ func (m Model) helpView() string {
   Display
   ───────
   t          Toggle thinking blocks
-  Enter      Expand/collapse tool results
+  Enter      Expand/collapse tool details
   Space      Toggle autoplay
   +/-        Adjust autoplay speed
 

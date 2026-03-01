@@ -10,7 +10,7 @@ import (
 	"github.com/trailblaze/claude-replay/internal/ui/theme"
 )
 
-const maxToolResultLines = 15
+const shortResultThreshold = 3
 
 // RenderBlock renders a single content block.
 func RenderBlock(block session.Block, showThinking bool, expandedTools map[string]bool, width int) string {
@@ -25,7 +25,8 @@ func RenderBlock(block session.Block, showThinking bool, expandedTools map[strin
 	case session.BlockThinking:
 		return renderThinkingBlock(block.Text, showThinking, contentWidth)
 	case session.BlockToolUse:
-		return renderToolUseBlock(block, contentWidth)
+		expanded := expandedTools != nil && expandedTools[block.ToolID]
+		return renderToolUseBlock(block, expanded, contentWidth)
 	case session.BlockToolResult:
 		expanded := expandedTools != nil && expandedTools[block.ToolID]
 		return renderToolResultBlock(block, expanded, contentWidth)
@@ -68,7 +69,7 @@ func renderThinkingBlock(text string, expanded bool, width int) string {
 	return header + "\n" + body
 }
 
-func renderToolUseBlock(block session.Block, width int) string {
+func renderToolUseBlock(block session.Block, expanded bool, width int) string {
 	icon := toolIcon(block.ToolName)
 	header := lipgloss.NewStyle().
 		Foreground(theme.ColorToolUse).
@@ -76,14 +77,14 @@ func renderToolUseBlock(block session.Block, width int) string {
 		PaddingLeft(2).
 		Render(fmt.Sprintf("%s %s", icon, block.ToolName))
 
-	detail := renderToolInput(block, width)
+	detail := renderToolInput(block, expanded, width)
 	if detail != "" {
 		return header + "\n" + detail
 	}
 	return header
 }
 
-func renderToolInput(block session.Block, width int) string {
+func renderToolInput(block session.Block, expanded bool, width int) string {
 	input := block.ToolInput
 	if input == nil {
 		return ""
@@ -98,10 +99,16 @@ func renderToolInput(block session.Block, width int) string {
 	case "Bash":
 		cmd, _ := input["command"].(string)
 		desc, _ := input["description"].(string)
-		if desc != "" {
-			return style.Render(desc) + "\n" + style.Foreground(theme.ColorDim).Render(truncateLines(cmd, 5))
+		if !expanded {
+			if desc != "" {
+				return style.Render(desc)
+			}
+			return style.Render(truncateLines(cmd, 1))
 		}
-		return style.Render(truncateLines(cmd, 8))
+		if desc != "" {
+			return style.Render(desc) + "\n" + style.Foreground(theme.ColorDim).Render(truncateLines(cmd, 20))
+		}
+		return style.Render(truncateLines(cmd, 20))
 
 	case "Read":
 		path, _ := input["file_path"].(string)
@@ -115,6 +122,9 @@ func renderToolInput(block session.Block, width int) string {
 
 	case "Edit":
 		path, _ := input["file_path"].(string)
+		if !expanded {
+			return style.Render(path)
+		}
 		oldStr, _ := input["old_string"].(string)
 		newStr, _ := input["new_string"].(string)
 		result := path + "\n"
@@ -152,12 +162,18 @@ func renderToolInput(block session.Block, width int) string {
 		if desc != "" {
 			return style.Render(desc)
 		}
+		if !expanded {
+			return style.Render(truncateLines(prompt, 1))
+		}
 		return style.Render(truncateLines(prompt, 3))
 
 	default:
 		b, err := json.MarshalIndent(input, "", "  ")
 		if err != nil {
 			return ""
+		}
+		if !expanded {
+			return style.Render(truncateLines(string(b), 2))
 		}
 		return style.Render(truncateLines(string(b), 8))
 	}
@@ -187,14 +203,11 @@ func renderToolResultBlock(block session.Block, expanded bool, width int) string
 		PaddingLeft(4).
 		Width(width)
 
-	if !expanded && len(lines) > maxToolResultLines {
-		truncated := strings.Join(lines[:maxToolResultLines], "\n")
-		remaining := len(lines) - maxToolResultLines
-		return style.Render(truncated) + "\n" +
-			lipgloss.NewStyle().
-				Foreground(theme.ColorWarning).
-				PaddingLeft(4).
-				Render(fmt.Sprintf("... +%d lines [enter to expand]", remaining))
+	if !expanded && len(lines) > shortResultThreshold {
+		return lipgloss.NewStyle().
+			Foreground(theme.ColorWarning).
+			PaddingLeft(4).
+			Render(fmt.Sprintf("↳ %d lines [enter to expand]", len(lines)))
 	}
 
 	return style.Render(text)

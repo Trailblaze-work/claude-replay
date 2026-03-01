@@ -1,6 +1,7 @@
 package replay
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -257,11 +258,69 @@ func TestRenderToolInput_Various(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := renderToolInput(tt.block, 80)
+			output := renderToolInput(tt.block, false, 80)
 			if !strings.Contains(output, tt.contains) {
 				t.Errorf("expected output to contain %q, got %q", tt.contains, output)
 			}
 		})
+	}
+}
+
+func TestRenderBlock_ToolResultCollapsed30Lines(t *testing.T) {
+	lines := make([]string, 30)
+	for i := range lines {
+		lines[i] = fmt.Sprintf("content line %d", i+1)
+	}
+	longText := strings.Join(lines, "\n")
+
+	block := session.Block{
+		Type:   session.BlockToolResult,
+		ToolID: "tool_1",
+		Text:   longText,
+	}
+
+	collapsed := RenderBlock(block, false, nil, 80)
+	// Should show summary only, no content lines
+	if strings.Contains(collapsed, "content line") {
+		t.Error("collapsed 30-line result should not show any content lines")
+	}
+	if !strings.Contains(collapsed, "30 lines") {
+		t.Error("collapsed result should show '30 lines'")
+	}
+	if !strings.Contains(collapsed, "enter to expand") {
+		t.Error("collapsed result should show expand hint")
+	}
+}
+
+func TestRenderToolInput_EditCollapsedExpanded(t *testing.T) {
+	block := session.Block{
+		ToolName: "Edit",
+		ToolInput: map[string]interface{}{
+			"file_path":  "/tmp/test.go",
+			"old_string": "old code here",
+			"new_string": "new code here",
+		},
+	}
+
+	// Collapsed: should show path only, no diff
+	collapsed := renderToolInput(block, false, 80)
+	if !strings.Contains(collapsed, "/tmp/test.go") {
+		t.Error("collapsed Edit should show file path")
+	}
+	if strings.Contains(collapsed, "old code") || strings.Contains(collapsed, "new code") {
+		t.Error("collapsed Edit should not show diff content")
+	}
+
+	// Expanded: should show path and diff
+	expanded := renderToolInput(block, true, 80)
+	if !strings.Contains(expanded, "/tmp/test.go") {
+		t.Error("expanded Edit should show file path")
+	}
+	if !strings.Contains(expanded, "old code") {
+		t.Error("expanded Edit should show old string")
+	}
+	if !strings.Contains(expanded, "new code") {
+		t.Error("expanded Edit should show new string")
 	}
 }
 
