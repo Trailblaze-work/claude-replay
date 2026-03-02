@@ -198,6 +198,65 @@ func TestParse_SkipsMalformedLines(t *testing.T) {
 	}
 }
 
+func TestParse_CommandMessage(t *testing.T) {
+	input := `{"type":"user","parentUuid":"p1","uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":"<command-message>session-trail:backfill</command-message>\n<command-name>/session-trail:backfill</command-name>"},"isSidechain":false}`
+
+	records, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(records))
+	}
+
+	msg, err := records[0].ParseUserMessage()
+	if err != nil {
+		t.Fatalf("ParseUserMessage error: %v", err)
+	}
+
+	cmdName, ok := msg.CommandName()
+	if !ok {
+		t.Fatal("expected CommandName to return true")
+	}
+	if cmdName != "/session-trail:backfill" {
+		t.Errorf("expected /session-trail:backfill, got %s", cmdName)
+	}
+}
+
+func TestCommandName_RegularMessage(t *testing.T) {
+	input := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":"hello world"},"isSidechain":false}`
+
+	records, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	msg, err := records[0].ParseUserMessage()
+	if err != nil {
+		t.Fatalf("ParseUserMessage error: %v", err)
+	}
+
+	_, ok := msg.CommandName()
+	if ok {
+		t.Error("expected CommandName to return false for regular message")
+	}
+}
+
+func TestParse_IsMeta(t *testing.T) {
+	input := `{"type":"user","parentUuid":"p1","uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":[{"type":"text","text":"expanded skill prompt here"}]},"isMeta":true,"isSidechain":false}`
+
+	records, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(records))
+	}
+	if !records[0].IsMeta {
+		t.Error("expected IsMeta to be true")
+	}
+}
+
 // --- QuickScan tests ---
 
 func TestQuickScan_BasicMetadata(t *testing.T) {

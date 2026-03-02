@@ -104,6 +104,11 @@ func segmentTurns(records []parser.Record, sess *Session) []Turn {
 
 		switch rec.Type {
 		case parser.RecordTypeUser:
+			// Skip meta messages (expanded skill prompts injected after commands)
+			if rec.IsMeta {
+				continue
+			}
+
 			userMsg, err := rec.ParseUserMessage()
 			if err != nil {
 				continue
@@ -132,8 +137,11 @@ func segmentTurns(records []parser.Record, sess *Session) []Turn {
 					}
 				}
 			} else {
-				// New user text message = new turn
+				// Check for slash command messages
 				text := userMsg.UserText()
+				if cmdName, ok := userMsg.CommandName(); ok {
+					text = cmdName
+				}
 				if text == "" {
 					continue
 				}

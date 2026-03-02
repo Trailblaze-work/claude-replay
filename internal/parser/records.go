@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/json"
+	"regexp"
 	"time"
 )
 
@@ -28,6 +29,7 @@ type Record struct {
 	Slug       string          `json:"slug"`
 	Version    string          `json:"version"`
 	IsSidechain bool           `json:"isSidechain"`
+	IsMeta     bool            `json:"isMeta"`
 
 	// User fields
 	Message json.RawMessage `json:"message"`
@@ -134,4 +136,17 @@ func (msg *UserMessage) ParseToolResults() ([]ToolResult, error) {
 		return nil, err
 	}
 	return results, nil
+}
+
+var commandNameRe = regexp.MustCompile(`<command-name>(/[^<]+)</command-name>`)
+
+// CommandName extracts a slash command name from a command message.
+// Returns the command (e.g. "/session-trail:backfill") and true if found,
+// or empty string and false otherwise.
+func (msg *UserMessage) CommandName() (string, bool) {
+	text := msg.UserText()
+	if m := commandNameRe.FindStringSubmatch(text); len(m) == 2 {
+		return m[1], true
+	}
+	return "", false
 }

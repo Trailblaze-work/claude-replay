@@ -113,6 +113,93 @@ func TestLoadSession_TurnSegmentation(t *testing.T) {
 	}
 }
 
+func TestLoadSession_CommandMessage(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cmd-session.jsonl")
+
+	lines := []string{
+		// Regular user message
+		`{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","cwd":"/test","gitBranch":"main","message":{"role":"user","content":"hello"},"isSidechain":false}`,
+		// Assistant response
+		`{"type":"assistant","parentUuid":"u1","uuid":"a1","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"model":"claude-opus-4-6","id":"msg_1","role":"assistant","content":[{"type":"text","text":"hi there"}]},"isSidechain":false}`,
+		// Command message (slash command invocation)
+		`{"type":"user","parentUuid":"a1","uuid":"u2","sessionId":"s1","timestamp":"2026-02-13T12:01:00.000Z","cwd":"/test","gitBranch":"main","message":{"role":"user","content":"<command-message>session-trail:backfill</command-message>\n<command-name>/session-trail:backfill</command-name>"},"isSidechain":false}`,
+		// Meta message (expanded skill prompt) - should be skipped
+		`{"type":"user","parentUuid":"u2","uuid":"u3","sessionId":"s1","timestamp":"2026-02-13T12:01:00.000Z","cwd":"/test","gitBranch":"main","message":{"role":"user","content":[{"type":"text","text":"Base directory for this skill: /path/to/skill\n\nRun the backfill script:\nbash script.sh"}]},"isMeta":true,"isSidechain":false}`,
+		// Assistant response to the command
+		`{"type":"assistant","parentUuid":"u3","uuid":"a2","sessionId":"s1","timestamp":"2026-02-13T12:01:01.000Z","message":{"model":"claude-opus-4-6","id":"msg_2","role":"assistant","content":[{"type":"text","text":"Running the backfill..."}]},"isSidechain":false}`,
+	}
+
+	content := ""
+	for _, l := range lines {
+		content += l + "\n"
+	}
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("writing test file: %v", err)
+	}
+
+	sess, err := LoadSession(path)
+	if err != nil {
+		t.Fatalf("LoadSession error: %v", err)
+	}
+
+	// Should have 2 turns: "hello" and "/session-trail:backfill"
+	// The meta message should NOT create a third turn
+	if len(sess.Turns) != 2 {
+		t.Fatalf("expected 2 turns, got %d", len(sess.Turns))
+	}
+
+	// Turn 1: regular message
+	if sess.Turns[0].UserText != "hello" {
+		t.Errorf("turn 1 user text: got %q, want %q", sess.Turns[0].UserText, "hello")
+	}
+
+	// Turn 2: command should be rendered as the clean command name
+	if sess.Turns[1].UserText != "/session-trail:backfill" {
+		t.Errorf("turn 2 user text: got %q, want %q", sess.Turns[1].UserText, "/session-trail:backfill")
+	}
+
+	// Turn 2 should have the assistant's response block
+	if len(sess.Turns[1].Blocks) != 1 {
+		t.Errorf("turn 2 blocks: expected 1, got %d", len(sess.Turns[1].Blocks))
+	}
+	if sess.Turns[1].Blocks[0].Type != BlockText {
+		t.Errorf("turn 2 block 0: expected text, got %d", sess.Turns[1].Blocks[0].Type)
+	}
+}
+
+func TestLoadSession_MetaMessageOnly(t *testing.T) {
+	// Test that a meta message without a preceding command doesn't create a turn
+	dir := t.TempDir()
+	path := filepath.Join(dir, "meta-only.jsonl")
+
+	lines := []string{
+		`{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","cwd":"/test","message":{"role":"user","content":"hello"},"isSidechain":false}`,
+		`{"type":"assistant","parentUuid":"u1","uuid":"a1","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"model":"claude-opus-4-6","id":"msg_1","role":"assistant","content":[{"type":"text","text":"hi"}]},"isSidechain":false}`,
+		// Meta message without a preceding command message
+		`{"type":"user","parentUuid":"a1","uuid":"u2","sessionId":"s1","timestamp":"2026-02-13T12:01:00.000Z","cwd":"/test","message":{"role":"user","content":[{"type":"text","text":"injected prompt"}]},"isMeta":true,"isSidechain":false}`,
+	}
+
+	content := ""
+	for _, l := range lines {
+		content += l + "\n"
+	}
+	os.WriteFile(path, []byte(content), 0644)
+
+	sess, err := LoadSession(path)
+	if err != nil {
+		t.Fatalf("LoadSession error: %v", err)
+	}
+
+	// Only 1 turn - the meta message is skipped
+	if len(sess.Turns) != 1 {
+		t.Fatalf("expected 1 turn, got %d", len(sess.Turns))
+	}
+	if sess.Turns[0].UserText != "hello" {
+		t.Errorf("turn 1 user text: got %q, want %q", sess.Turns[0].UserText, "hello")
+	}
+}
+
 func TestLoadSession_EmptyFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "empty.jsonl")
