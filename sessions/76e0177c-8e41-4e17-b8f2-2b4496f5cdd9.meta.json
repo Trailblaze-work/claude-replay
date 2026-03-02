@@ -2,20 +2,20 @@
   "session_id": "76e0177c-8e41-4e17-b8f2-2b4496f5cdd9",
   "slug": "goofy-weaving-flute",
   "started": "2026-03-02T09:25:22.256Z",
-  "last_updated": "2026-03-02T09:33:36.305Z",
+  "last_updated": "2026-03-02T09:34:22.347Z",
   "models": [
     "claude-opus-4-6"
   ],
   "client_version": "2.1.63",
   "git_branch": "collapse-tool-details",
-  "user_turns": 56,
-  "assistant_turns": 71,
+  "user_turns": 63,
+  "assistant_turns": 79,
   "commits": [],
   "tools_used": {
     "Read": 3,
     "Grep": 2,
     "Edit": 25,
-    "Bash": 18
+    "Bash": 24
   },
-  "compressed_size": 28536
+  "compressed_size": 33045
 }
