@@ -4,7 +4,7 @@ A TUI tool to browse and replay [Claude Code](https://docs.anthropic.com/en/docs
 
 Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss](https://github.com/charmbracelet/lipgloss), and [Glamour](https://github.com/charmbracelet/glamour).
 
-![demo](demo.gif?v=20260302)
+![demo](demo.gif?v=20260302b)
 
 ## Install
 
