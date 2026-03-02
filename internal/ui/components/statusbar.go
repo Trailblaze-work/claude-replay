@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/trailblaze/claude-replay/internal/ui/theme"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/theme"
 )
 
 // RenderStatusBar renders the bottom status bar.

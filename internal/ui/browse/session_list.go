@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/trailblaze/claude-replay/internal/session"
-	"github.com/trailblaze/claude-replay/internal/ui/theme"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/theme"
 )
 
 // SessionSelected is sent when a session is chosen.

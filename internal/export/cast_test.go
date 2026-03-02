@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/trailblaze/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
 )
 
 func TestGenerateCast(t *testing.T) {

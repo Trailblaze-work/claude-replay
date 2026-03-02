@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/trailblaze/claude-replay/internal/parser"
+	"github.com/Trailblaze-work/claude-replay/internal/parser"
 )
 
 // Turn represents one conversational turn: a user message followed by

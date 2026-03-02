@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/trailblaze/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
 )
 
 func TestToolIcon(t *testing.T) {

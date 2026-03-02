@@ -9,7 +9,7 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss]
 ## Install
 
 ```bash
-go install github.com/trailblaze/claude-replay@latest
+go install github.com/Trailblaze-work/claude-replay@latest
 ```
 
 Or build from source:

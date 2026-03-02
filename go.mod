@@ -1,4 +1,4 @@
-module github.com/trailblaze/claude-replay
+module github.com/Trailblaze-work/claude-replay
 
 go 1.24.2
 

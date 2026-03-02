@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/trailblaze/claude-replay/internal/session"
-	"github.com/trailblaze/claude-replay/internal/ui/browse"
-	"github.com/trailblaze/claude-replay/internal/ui/replay"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/browse"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/replay"
 )
 
 // Screen identifies the current UI screen.

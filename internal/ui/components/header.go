@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/trailblaze/claude-replay/internal/ui/theme"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/theme"
 )
 
 // RenderHeader renders the top header bar.

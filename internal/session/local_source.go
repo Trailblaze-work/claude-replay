@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/trailblaze/claude-replay/internal/parser"
+	"github.com/Trailblaze-work/claude-replay/internal/parser"
 )
 
 // LocalSource implements SessionSource using the local filesystem (~/.claude).

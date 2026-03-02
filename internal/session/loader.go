@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/trailblaze/claude-replay/internal/parser"
+	"github.com/Trailblaze-work/claude-replay/internal/parser"
 )
 
 // Project represents a Claude Code project directory.

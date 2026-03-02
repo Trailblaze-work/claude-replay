@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/trailblaze/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
 )
 
 func TestFormatBytes(t *testing.T) {

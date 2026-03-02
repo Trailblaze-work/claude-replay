@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/trailblaze/claude-replay/internal/session"
-	"github.com/trailblaze/claude-replay/internal/ui/theme"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/theme"
 )
 
 // RenderTurn renders a complete turn (user message + all blocks).

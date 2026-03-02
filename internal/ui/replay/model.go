@@ -6,9 +6,9 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/trailblaze/claude-replay/internal/session"
-	"github.com/trailblaze/claude-replay/internal/ui/components"
-	"github.com/trailblaze/claude-replay/internal/ui/theme"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/components"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/theme"
 )
 
 // BackToList signals to return to the session list.

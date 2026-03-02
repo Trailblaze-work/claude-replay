@@ -9,7 +9,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
-	"github.com/trailblaze/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
 )
 
 // castHeader is the asciinema v2 header.

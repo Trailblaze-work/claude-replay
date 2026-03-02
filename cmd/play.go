@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
-	"github.com/trailblaze/claude-replay/internal/ui/replay"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/replay"
 )
 
 // replayWrapper wraps replay.Model to implement tea.Model.

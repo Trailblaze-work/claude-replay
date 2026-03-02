@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/trailblaze/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
 )
 
 var (

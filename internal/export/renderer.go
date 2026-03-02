@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/trailblaze/claude-replay/internal/session"
-	"github.com/trailblaze/claude-replay/internal/ui/components"
-	"github.com/trailblaze/claude-replay/internal/ui/replay"
+	"github.com/Trailblaze-work/claude-replay/internal/session"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/components"
+	"github.com/Trailblaze-work/claude-replay/internal/ui/replay"
 )
 
 // RenderFrame renders a complete TUI frame for a given turn as a string.

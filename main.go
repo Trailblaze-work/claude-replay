@@ -1,6 +1,6 @@
 package main
 
-import "github.com/trailblaze/claude-replay/cmd"
+import "github.com/Trailblaze-work/claude-replay/cmd"
 
 func main() {
 	cmd.Execute()

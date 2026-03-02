@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/trailblaze/claude-replay/internal/export"
+	"github.com/Trailblaze-work/claude-replay/internal/export"
 )
 
 var (
