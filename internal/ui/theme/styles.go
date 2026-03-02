@@ -17,6 +17,11 @@ var (
 	ColorThinking   = lipgloss.Color("#BB9AF7") // Purple for thinking
 	ColorToolUse    = lipgloss.Color("#7DCFFF") // Cyan for tool use
 	ColorUser       = lipgloss.Color("#9ECE6A") // Green for user
+	ColorDiffAddBg  = lipgloss.Color("#1C3A2A") // Dark green bg for added lines
+	ColorDiffDelBg  = lipgloss.Color("#3A1C1C") // Dark red bg for removed lines
+	ColorDiffAddFg  = lipgloss.Color("#B8DB9A") // Light green text for added lines
+	ColorDiffDelFg  = lipgloss.Color("#E8A0A0") // Light red/pink text for removed lines
+	ColorDiffCtx    = lipgloss.Color("#707070") // Context line numbers/dim text
 )
 
 // Styles used throughout the app

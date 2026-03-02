@@ -2,34 +2,31 @@ package replay
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Trailblaze-work/claude-replay/internal/session"
 )
 
-func TestToolIcon(t *testing.T) {
-	tests := []struct {
-		name     string
-		expected string
-	}{
-		{"Bash", ">"},
-		{"Read", "#"},
-		{"Write", "+"},
-		{"Edit", "~"},
-		{"Glob", "*"},
-		{"Grep", "/"},
-		{"WebFetch", "@"},
-		{"WebSearch", "@"},
-		{"Task", "&"},
-		{"Agent", "&"},
-		{"UnknownTool", ">"},
-	}
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
-	for _, tt := range tests {
-		got := toolIcon(tt.name)
-		if got != tt.expected {
-			t.Errorf("toolIcon(%q) = %q, want %q", tt.name, got, tt.expected)
+// stripANSI removes ANSI escape codes for test assertions.
+func stripANSI(s string) string {
+	return ansiRe.ReplaceAllString(s, "")
+}
+
+func TestToolMarkerIsBullet(t *testing.T) {
+	tools := []string{"Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "Agent", "UnknownTool"}
+	for _, name := range tools {
+		block := session.Block{
+			Type:     session.BlockToolUse,
+			ToolName: name,
+		}
+		output := RenderBlock(block, false, 80, "", nil, nil)
+		if !strings.Contains(output, "●") {
+			t.Errorf("tool %q header should contain ● marker, got %q", name, output)
 		}
 	}
 }
@@ -62,7 +59,7 @@ func TestRenderTurn_ContainsUserText(t *testing.T) {
 		},
 	}
 
-	output := RenderTurn(turn, false, nil, 80)
+	output := RenderTurn(turn, false, 80, "")
 	if !strings.Contains(output, "What is Go?") {
 		t.Error("output should contain user text")
 	}
@@ -78,8 +75,9 @@ func TestRenderTurn_ContainsBlocks(t *testing.T) {
 		},
 	}
 
-	output := RenderTurn(turn, false, nil, 80)
-	if !strings.Contains(output, "response text here") {
+	output := RenderTurn(turn, false, 80, "")
+	plain := stripANSI(output)
+	if !strings.Contains(plain, "response text here") {
 		t.Error("output should contain text block content")
 	}
 	if !strings.Contains(output, "Bash") {
@@ -89,18 +87,19 @@ func TestRenderTurn_ContainsBlocks(t *testing.T) {
 
 func TestRenderBlock_TextBlock(t *testing.T) {
 	block := session.Block{Type: session.BlockText, Text: "Hello world"}
-	output := RenderBlock(block, false, nil, 80)
+	output := RenderBlock(block, false, 80, "", nil, nil)
 	if output == "" {
 		t.Error("expected non-empty output for text block")
 	}
-	if !strings.Contains(output, "Hello world") {
+	plain := stripANSI(output)
+	if !strings.Contains(plain, "Hello world") {
 		t.Error("output should contain block text")
 	}
 }
 
 func TestRenderBlock_UnknownType(t *testing.T) {
 	block := session.Block{Type: session.BlockType(99), Text: "unknown"}
-	output := RenderBlock(block, false, nil, 80)
+	output := RenderBlock(block, false, 80, "", nil, nil)
 	if output != "" {
 		t.Errorf("expected empty output for unknown block type, got %q", output)
 	}
@@ -108,14 +107,13 @@ func TestRenderBlock_UnknownType(t *testing.T) {
 
 func TestRenderBlock_ThinkingCollapsed(t *testing.T) {
 	block := session.Block{Type: session.BlockThinking, Text: "Let me think about this..."}
-	output := RenderBlock(block, false, nil, 80)
+	output := RenderBlock(block, false, 80, "", nil, nil)
 	if output == "" {
 		t.Error("expected non-empty output for thinking block")
 	}
 	if !strings.Contains(output, "thinking") {
 		t.Error("output should contain 'thinking' header")
 	}
-	// When collapsed (showThinking=false), the thinking body should not appear
 	if strings.Contains(output, "Let me think about this...") {
 		t.Error("collapsed thinking should not show body text")
 	}
@@ -123,7 +121,7 @@ func TestRenderBlock_ThinkingCollapsed(t *testing.T) {
 
 func TestRenderBlock_ThinkingExpanded(t *testing.T) {
 	block := session.Block{Type: session.BlockThinking, Text: "Deep thoughts here"}
-	output := RenderBlock(block, true, nil, 80)
+	output := RenderBlock(block, true, 80, "", nil, nil)
 	if !strings.Contains(output, "Deep thoughts here") {
 		t.Error("expanded thinking should show body text")
 	}
@@ -135,12 +133,76 @@ func TestRenderBlock_ToolUse(t *testing.T) {
 		ToolName:  "Read",
 		ToolInput: map[string]interface{}{"file_path": "/tmp/test.go"},
 	}
-	output := RenderBlock(block, false, nil, 80)
-	if !strings.Contains(output, "Read") {
+	// Collapsed Read shows summary, not path
+	collapsed := RenderBlock(block, false, 80, "", nil, nil)
+	if !strings.Contains(collapsed, "●") {
+		t.Error("output should contain ● marker")
+	}
+	if !strings.Contains(collapsed, "Read") {
 		t.Error("output should contain tool name")
 	}
-	if !strings.Contains(output, "/tmp/test.go") {
-		t.Error("output should contain file path")
+	if !strings.Contains(collapsed, "1 file") {
+		t.Error("collapsed Read should show '1 file' summary")
+	}
+
+	// Expanded Read shows path
+	expanded := RenderBlock(block, true, 80, "", nil, nil)
+	if !strings.Contains(expanded, "/tmp/test.go") {
+		t.Error("expanded Read should contain file path")
+	}
+}
+
+func TestRenderBlock_ToolUseInlineParam(t *testing.T) {
+	tests := []struct {
+		name     string
+		block    session.Block
+		contains string
+	}{
+		{
+			name: "Bash shows command inline",
+			block: session.Block{
+				Type:      session.BlockToolUse,
+				ToolName:  "Bash",
+				ToolInput: map[string]interface{}{"command": "ls -la"},
+			},
+			contains: "(ls -la)",
+		},
+		{
+			name: "Bash always shows command even with description",
+			block: session.Block{
+				Type:      session.BlockToolUse,
+				ToolName:  "Bash",
+				ToolInput: map[string]interface{}{"command": "ls -la", "description": "list files"},
+			},
+			contains: "(ls -la)",
+		},
+		{
+			name: "Grep with path",
+			block: session.Block{
+				Type:      session.BlockToolUse,
+				ToolName:  "Grep",
+				ToolInput: map[string]interface{}{"pattern": "TODO", "path": "src/"},
+			},
+			contains: "(/TODO/ in src/)",
+		},
+		{
+			name: "WebSearch with query",
+			block: session.Block{
+				Type:      session.BlockToolUse,
+				ToolName:  "WebSearch",
+				ToolInput: map[string]interface{}{"query": "golang"},
+			},
+			contains: "(\"golang\")",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := RenderBlock(tt.block, false, 80, "", nil, nil)
+			if !strings.Contains(output, tt.contains) {
+				t.Errorf("expected output to contain %q, got %q", tt.contains, output)
+			}
+		})
 	}
 }
 
@@ -150,7 +212,10 @@ func TestRenderBlock_ToolResult(t *testing.T) {
 		ToolID: "tool_1",
 		Text:   "file contents here",
 	}
-	output := RenderBlock(block, false, nil, 80)
+	output := RenderBlock(block, false, 80, "", nil, nil)
+	if !strings.Contains(output, "⎿") {
+		t.Error("output should contain ⎿ bracket prefix")
+	}
 	if !strings.Contains(output, "file contents here") {
 		t.Error("output should contain tool result text")
 	}
@@ -163,7 +228,10 @@ func TestRenderBlock_ToolResultError(t *testing.T) {
 		Text:    "command not found",
 		IsError: true,
 	}
-	output := RenderBlock(block, false, nil, 80)
+	output := RenderBlock(block, false, 80, "", nil, nil)
+	if !strings.Contains(output, "⎿") {
+		t.Error("error result should contain ⎿ bracket")
+	}
 	if !strings.Contains(output, "Error") {
 		t.Error("error result should contain 'Error'")
 	}
@@ -175,14 +243,16 @@ func TestRenderBlock_ToolResultEmpty(t *testing.T) {
 		ToolID: "tool_1",
 		Text:   "",
 	}
-	output := RenderBlock(block, false, nil, 80)
-	if !strings.Contains(output, "empty result") {
-		t.Error("empty result should show '(empty result)'")
+	output := RenderBlock(block, false, 80, "", nil, nil)
+	if !strings.Contains(output, "⎿") {
+		t.Error("empty result should contain ⎿ bracket")
+	}
+	if !strings.Contains(output, "(No output)") {
+		t.Error("empty result should show '(No output)'")
 	}
 }
 
 func TestRenderBlock_ToolResultExpanded(t *testing.T) {
-	// Create a long result that would normally be truncated
 	lines := make([]string, 30)
 	for i := range lines {
 		lines[i] = "line content"
@@ -196,13 +266,13 @@ func TestRenderBlock_ToolResultExpanded(t *testing.T) {
 	}
 
 	// Collapsed: should truncate
-	collapsed := RenderBlock(block, false, nil, 80)
+	collapsed := RenderBlock(block, false, 80, "", nil, nil)
 	if !strings.Contains(collapsed, "expand") {
 		t.Error("long collapsed result should show expand hint")
 	}
 
 	// Expanded: should show all
-	expanded := RenderBlock(block, false, map[string]bool{"tool_1": true}, 80)
+	expanded := RenderBlock(block, true, 80, "", nil, nil)
 	if strings.Contains(expanded, "expand") {
 		t.Error("expanded result should not show expand hint")
 	}
@@ -258,7 +328,7 @@ func TestRenderToolInput_Various(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := renderToolInput(tt.block, false, 80)
+			output := renderToolInput(tt.block, false, 80, "", nil)
 			if !strings.Contains(output, tt.contains) {
 				t.Errorf("expected output to contain %q, got %q", tt.contains, output)
 			}
@@ -279,16 +349,18 @@ func TestRenderBlock_ToolResultCollapsed30Lines(t *testing.T) {
 		Text:   longText,
 	}
 
-	collapsed := RenderBlock(block, false, nil, 80)
-	// Should show summary only, no content lines
+	collapsed := RenderBlock(block, false, 80, "", nil, nil)
 	if strings.Contains(collapsed, "content line") {
 		t.Error("collapsed 30-line result should not show any content lines")
 	}
-	if !strings.Contains(collapsed, "30 lines") {
-		t.Error("collapsed result should show '30 lines'")
+	if !strings.Contains(collapsed, "⎿") {
+		t.Error("collapsed result should contain ⎿ bracket")
 	}
-	if !strings.Contains(collapsed, "enter to expand") {
-		t.Error("collapsed result should show expand hint")
+	if !strings.Contains(collapsed, "+30 lines") {
+		t.Error("collapsed result should show '+30 lines'")
+	}
+	if !strings.Contains(collapsed, "(ctrl+o to expand)") {
+		t.Error("collapsed result should show '(ctrl+o to expand)' hint")
 	}
 }
 
@@ -303,7 +375,7 @@ func TestRenderToolInput_EditCollapsedExpanded(t *testing.T) {
 	}
 
 	// Collapsed: should show path only, no diff
-	collapsed := renderToolInput(block, false, 80)
+	collapsed := renderToolInput(block, false, 80, "", nil)
 	if !strings.Contains(collapsed, "/tmp/test.go") {
 		t.Error("collapsed Edit should show file path")
 	}
@@ -312,14 +384,15 @@ func TestRenderToolInput_EditCollapsedExpanded(t *testing.T) {
 	}
 
 	// Expanded: should show path and diff
-	expanded := renderToolInput(block, true, 80)
-	if !strings.Contains(expanded, "/tmp/test.go") {
+	expanded := renderToolInput(block, true, 80, "", nil)
+	plainExpanded := stripANSI(expanded)
+	if !strings.Contains(plainExpanded, "/tmp/test.go") {
 		t.Error("expanded Edit should show file path")
 	}
-	if !strings.Contains(expanded, "old code") {
+	if !strings.Contains(plainExpanded, "old code") {
 		t.Error("expanded Edit should show old string")
 	}
-	if !strings.Contains(expanded, "new code") {
+	if !strings.Contains(plainExpanded, "new code") {
 		t.Error("expanded Edit should show new string")
 	}
 }
@@ -329,8 +402,147 @@ func TestRenderMarkdown_Plain(t *testing.T) {
 	if output == "" {
 		t.Error("expected non-empty markdown output")
 	}
-	// Should contain "world" regardless of formatting
 	if !strings.Contains(output, "world") {
 		t.Error("markdown output should contain the text")
+	}
+}
+
+func TestBashBriefParam_AlwaysShowsCommand(t *testing.T) {
+	block := session.Block{
+		Type:      session.BlockToolUse,
+		ToolName:  "Bash",
+		ToolInput: map[string]interface{}{"command": "git status", "description": "Show git status"},
+	}
+
+	brief := toolBriefParam(block, "")
+	if brief != "git status" {
+		t.Errorf("expected command 'git status', got %q", brief)
+	}
+}
+
+func TestBashBriefParam_MultilineCommand(t *testing.T) {
+	block := session.Block{
+		Type:      session.BlockToolUse,
+		ToolName:  "Bash",
+		ToolInput: map[string]interface{}{"command": "echo hello\necho world"},
+	}
+
+	brief := toolBriefParam(block, "")
+	if brief != "echo hello" {
+		t.Errorf("expected first line 'echo hello', got %q", brief)
+	}
+}
+
+func TestFormatDuration(t *testing.T) {
+	tests := []struct {
+		d    time.Duration
+		want string
+	}{
+		{500 * time.Millisecond, "500ms"},
+		{5 * time.Second, "5s"},
+		{5500 * time.Millisecond, "5.5s"},
+		{2*time.Minute + 15*time.Second, "2m 15s"},
+		{3 * time.Minute, "3m"},
+	}
+	for _, tt := range tests {
+		got := formatDuration(tt.d)
+		if got != tt.want {
+			t.Errorf("formatDuration(%v) = %q, want %q", tt.d, got, tt.want)
+		}
+	}
+}
+
+func TestRenderDuration_ContainsVerb(t *testing.T) {
+	output := renderDuration(2*time.Minute+15*time.Second, 1)
+	plain := stripANSI(output)
+	if !strings.Contains(plain, "for 2m 15s") {
+		t.Errorf("expected duration text, got %q", plain)
+	}
+	if !strings.Contains(plain, "*") {
+		t.Error("expected * prefix")
+	}
+}
+
+func TestRenderTurn_ShowsDuration(t *testing.T) {
+	turn := session.Turn{
+		Number:   1,
+		UserText: "explain this",
+		Duration: 2*time.Minute + 15*time.Second,
+		Blocks: []session.Block{
+			{Type: session.BlockThinking, Text: "Let me think..."},
+			{Type: session.BlockText, Text: "Here's my explanation."},
+		},
+	}
+
+	output := RenderTurn(turn, false, 80, "")
+	plain := stripANSI(output)
+	if !strings.Contains(plain, "for 2m 15s") {
+		t.Error("turn with thinking + duration should show duration")
+	}
+}
+
+func TestRenderTurn_DurationAlwaysAtEnd(t *testing.T) {
+	turn := session.Turn{
+		Number:   1,
+		UserText: "hello",
+		Duration: 5 * time.Second,
+		Blocks: []session.Block{
+			{Type: session.BlockText, Text: "Hi there!"},
+		},
+	}
+
+	output := RenderTurn(turn, false, 80, "")
+	plain := stripANSI(output)
+	if !strings.Contains(plain, "for 5s") {
+		t.Error("turn with duration should show duration at end")
+	}
+	// Duration should be after the content
+	hiIdx := strings.Index(plain, "Hi there!")
+	durIdx := strings.Index(plain, "for 5s")
+	if durIdx < hiIdx {
+		t.Error("duration should appear after content")
+	}
+}
+
+func TestHighlightDiffLine_NoLexer(t *testing.T) {
+	result := highlightDiffLine("+ ", "some text", nil, "#1C3A2A", "#B8DB9A", 40)
+	plain := stripANSI(result)
+	if !strings.Contains(plain, "+ some text") {
+		t.Errorf("fallback should contain text, got %q", plain)
+	}
+}
+
+func TestHighlightDiffLine_GoFile(t *testing.T) {
+	lexer := getLexer("test.go")
+	result := highlightDiffLine("+ ", "func main() {", lexer, "#1C3A2A", "#B8DB9A", 60)
+	if result == "" {
+		t.Error("expected non-empty highlighted line")
+	}
+	plain := stripANSI(result)
+	if !strings.Contains(plain, "func main()") {
+		t.Errorf("highlighted line should contain code text, got %q", plain)
+	}
+}
+
+func TestCtrlO_ExpandsEverything(t *testing.T) {
+	turn := session.Turn{
+		Number:   1,
+		UserText: "hello",
+		Blocks: []session.Block{
+			{Type: session.BlockThinking, Text: "Deep thoughts here"},
+			{Type: session.BlockText, Text: "response"},
+		},
+	}
+
+	// Collapsed: thinking body hidden
+	collapsed := RenderTurn(turn, false, 80, "")
+	if strings.Contains(collapsed, "Deep thoughts here") {
+		t.Error("collapsed turn should not show thinking body")
+	}
+
+	// Expanded: thinking body visible
+	expanded := RenderTurn(turn, true, 80, "")
+	if !strings.Contains(expanded, "Deep thoughts here") {
+		t.Error("expanded turn should show thinking body")
 	}
 }

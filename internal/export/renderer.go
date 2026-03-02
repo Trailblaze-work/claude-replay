@@ -26,7 +26,7 @@ func RenderFrame(sess *session.Session, turnIndex int, width, height int) string
 	header := components.RenderHeader(slug, sess.CWD, sess.GitBranch, width)
 
 	// Content
-	content := replay.RenderTurn(turn, false, nil, width)
+	content := replay.RenderTurn(turn, false, width, sess.CWD)
 
 	// Ensure content fills available space
 	contentLines := strings.Split(content, "\n")

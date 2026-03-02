@@ -114,19 +114,48 @@ func (r *Record) ParseAssistantMessage() (*AssistantMessage, error) {
 	return &msg, nil
 }
 
-// UserText returns the user's text content if the message content is a string.
-// Returns empty string if content is an array (tool results).
+// UserText returns the user's text content. If the message content is a plain
+// string it returns that; otherwise it tries to extract text from an array of
+// content blocks (e.g. text+image messages).
 func (msg *UserMessage) UserText() string {
 	var text string
-	if err := json.Unmarshal(msg.Content, &text); err != nil {
+	if err := json.Unmarshal(msg.Content, &text); err == nil {
+		return text
+	}
+	return msg.UserTextFromArray()
+}
+
+// UserTextFromArray extracts user text from array content like
+// [{"type":"text","text":"..."},{"type":"image",...}].
+func (msg *UserMessage) UserTextFromArray() string {
+	var blocks []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(msg.Content, &blocks); err != nil {
 		return ""
 	}
-	return text
+	for _, b := range blocks {
+		if b.Type == "text" && b.Text != "" {
+			return b.Text
+		}
+	}
+	return ""
 }
 
 // IsToolResults returns true if the user message content is a tool result array.
 func (msg *UserMessage) IsToolResults() bool {
-	return len(msg.Content) > 0 && msg.Content[0] == '['
+	if len(msg.Content) == 0 || msg.Content[0] != '[' {
+		return false
+	}
+	// Peek at first element to check for tool_result type
+	var items []struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(msg.Content, &items); err != nil || len(items) == 0 {
+		return false
+	}
+	return items[0].Type == "tool_result"
 }
 
 // ParseToolResults extracts tool results from a user message with array content.

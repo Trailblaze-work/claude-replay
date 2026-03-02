@@ -15,7 +15,6 @@ type KeyMap struct {
 	ScrollDown   key.Binding
 	PageUp       key.Binding
 	PageDown     key.Binding
-	ToggleThink  key.Binding
 	ExpandTool   key.Binding
 	AutoPlay     key.Binding
 	SpeedUp      key.Binding
@@ -56,11 +55,11 @@ var DefaultKeyMap = KeyMap{
 	),
 	ScrollUp: key.NewBinding(
 		key.WithKeys("up", "k"),
-		key.WithHelp("↑/k", "scroll up"),
+		key.WithHelp("↑/k", "prev section"),
 	),
 	ScrollDown: key.NewBinding(
 		key.WithKeys("down", "j"),
-		key.WithHelp("↓/j", "scroll down"),
+		key.WithHelp("↓/j", "next section"),
 	),
 	PageUp: key.NewBinding(
 		key.WithKeys("pgup", "ctrl+u"),
@@ -70,13 +69,9 @@ var DefaultKeyMap = KeyMap{
 		key.WithKeys("pgdown", "ctrl+d"),
 		key.WithHelp("PgDn", "page down"),
 	),
-	ToggleThink: key.NewBinding(
-		key.WithKeys("t"),
-		key.WithHelp("t", "toggle thinking"),
-	),
 	ExpandTool: key.NewBinding(
-		key.WithKeys("enter"),
-		key.WithHelp("enter", "expand/collapse"),
+		key.WithKeys("ctrl+o"),
+		key.WithHelp("ctrl+o", "expand/collapse"),
 	),
 	AutoPlay: key.NewBinding(
 		key.WithKeys(" "),

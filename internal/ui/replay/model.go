@@ -24,8 +24,7 @@ type Model struct {
 	viewport      viewport.Model
 	width         int
 	height        int
-	showThinking  bool
-	expandedTools map[string]bool
+	allExpanded   bool
 	showHelp      bool
 	autoPlay      bool
 	autoPlaySpeed time.Duration
@@ -39,8 +38,6 @@ func New(sess *session.Session, width, height int) Model {
 		currentTurn:   0,
 		width:         width,
 		height:        height,
-		showThinking:  false,
-		expandedTools: make(map[string]bool),
 		autoPlaySpeed: 2 * time.Second,
 	}
 	m.initViewport()
@@ -56,6 +53,9 @@ func (m *Model) initViewport() {
 	}
 
 	m.viewport = viewport.New(m.width, contentHeight)
+	// Add j/k to viewport scroll keys
+	m.viewport.KeyMap.Up.SetKeys("up", "k")
+	m.viewport.KeyMap.Down.SetKeys("down", "j")
 	m.updateContent()
 	m.ready = true
 }
@@ -67,9 +67,8 @@ func (m *Model) updateContent() {
 	}
 
 	turn := m.session.Turns[m.currentTurn]
-	content := RenderTurn(turn, m.showThinking, m.expandedTools, m.width)
+	content := RenderTurn(turn, m.allExpanded, m.width, m.session.CWD)
 	m.viewport.SetContent(content)
-	m.viewport.GotoTop()
 }
 
 func (m Model) Init() tea.Cmd {
@@ -94,30 +93,25 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			if m.currentTurn < len(m.session.Turns)-1 {
 				m.currentTurn++
 				m.updateContent()
+				m.viewport.GotoTop()
 			}
 		case key.Matches(msg, theme.DefaultKeyMap.PrevTurn):
 			if m.currentTurn > 0 {
 				m.currentTurn--
 				m.updateContent()
+				m.viewport.GotoTop()
 			}
 		case key.Matches(msg, theme.DefaultKeyMap.FirstTurn):
 			m.currentTurn = 0
 			m.updateContent()
+			m.viewport.GotoTop()
 		case key.Matches(msg, theme.DefaultKeyMap.LastTurn):
 			m.currentTurn = len(m.session.Turns) - 1
 			m.updateContent()
-
-		case key.Matches(msg, theme.DefaultKeyMap.ToggleThink):
-			m.showThinking = !m.showThinking
-			m.updateContent()
+			m.viewport.GotoTop()
 
 		case key.Matches(msg, theme.DefaultKeyMap.ExpandTool):
-			turn := m.session.Turns[m.currentTurn]
-			for _, block := range turn.Blocks {
-				if (block.Type == session.BlockToolUse || block.Type == session.BlockToolResult) && block.ToolID != "" {
-					m.expandedTools[block.ToolID] = !m.expandedTools[block.ToolID]
-				}
-			}
+			m.allExpanded = !m.allExpanded
 			m.updateContent()
 
 		case key.Matches(msg, theme.DefaultKeyMap.AutoPlay):
@@ -144,6 +138,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if m.currentTurn < len(m.session.Turns)-1 {
 			m.currentTurn++
 			m.updateContent()
+			m.viewport.GotoTop()
 			return m, m.autoPlayCmd()
 		}
 		m.autoPlay = false
@@ -204,14 +199,12 @@ func (m Model) helpView() string {
   →/l        Next turn
   Home/g     First turn
   End/G      Last turn
-  ↑/k        Scroll up
-  ↓/j        Scroll down
+  ↑/k/↓/j   Scroll
   PgUp/PgDn  Page up/down
 
   Display
   ───────
-  t          Toggle thinking blocks
-  Enter      Expand/collapse tool details
+  Ctrl+O     Expand/collapse all
   Space      Toggle autoplay
   +/-        Adjust autoplay speed
 

@@ -4,12 +4,19 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Trailblaze-work/claude-replay/internal/session"
 )
+
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+func stripANSI(s string) string {
+	return ansiRe.ReplaceAllString(s, "")
+}
 
 func TestGenerateCast(t *testing.T) {
 	dir := t.TempDir()
@@ -121,10 +128,11 @@ func TestRenderFrame_Basic(t *testing.T) {
 	if frame == "" {
 		t.Fatal("expected non-empty frame")
 	}
-	if !strings.Contains(frame, "Hello world") {
+	plain := stripANSI(frame)
+	if !strings.Contains(plain, "Hello world") {
 		t.Error("frame should contain user text")
 	}
-	if !strings.Contains(frame, "Hi there!") {
+	if !strings.Contains(plain, "Hi there!") {
 		t.Error("frame should contain assistant text")
 	}
 }

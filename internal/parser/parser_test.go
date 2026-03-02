@@ -353,6 +353,49 @@ func TestParse_IsMeta(t *testing.T) {
 	}
 }
 
+func TestParse_ArrayContentTextImage(t *testing.T) {
+	// User message with text+image array content should NOT be treated as tool results
+	input := `{"type":"user","parentUuid":"p1","uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":[{"type":"text","text":"Look at this screenshot"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"abc"}}]},"isSidechain":false}`
+
+	records, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	msg, err := records[0].ParseUserMessage()
+	if err != nil {
+		t.Fatalf("ParseUserMessage error: %v", err)
+	}
+
+	if msg.IsToolResults() {
+		t.Error("text+image array should NOT be classified as tool results")
+	}
+
+	text := msg.UserText()
+	if text != "Look at this screenshot" {
+		t.Errorf("expected user text 'Look at this screenshot', got %q", text)
+	}
+}
+
+func TestUserTextFromArray_Empty(t *testing.T) {
+	input := `{"type":"user","parentUuid":"p1","uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":[{"type":"image","source":{"type":"base64","media_type":"image/png","data":"abc"}}]},"isSidechain":false}`
+
+	records, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	msg, err := records[0].ParseUserMessage()
+	if err != nil {
+		t.Fatalf("ParseUserMessage error: %v", err)
+	}
+
+	text := msg.UserTextFromArray()
+	if text != "" {
+		t.Errorf("expected empty text for image-only array, got %q", text)
+	}
+}
+
 // --- QuickScan tests ---
 
 func TestQuickScan_BasicMetadata(t *testing.T) {
@@ -437,6 +480,115 @@ func TestQuickScan_MultipleTurns(t *testing.T) {
 	}
 	if turnCount != 3 {
 		t.Errorf("turnCount: got %d, want 3", turnCount)
+	}
+}
+
+func TestQuickScan_SkipsMetaMessages(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "meta.jsonl")
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"role":"user","content":"hello"},"isSidechain":false}
+{"type":"user","parentUuid":"u1","uuid":"u2","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"role":"user","content":"expanded skill prompt"},"isMeta":true,"isSidechain":false}
+{"type":"user","parentUuid":"u2","uuid":"u3","sessionId":"s1","timestamp":"2026-02-13T12:01:00.000Z","message":{"role":"user","content":"second turn"},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	_, _, _, _, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if turnCount != 2 {
+		t.Errorf("turnCount: got %d, want 2 (meta message should not count)", turnCount)
+	}
+}
+
+func TestQuickScan_SkipsBashOutput(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bash-output.jsonl")
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"role":"user","content":"hello"},"isSidechain":false}
+{"type":"user","parentUuid":"u1","uuid":"u2","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"role":"user","content":"<bash-stdout>file1.txt\nfile2.txt</bash-stdout><bash-stderr></bash-stderr>"},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	_, _, _, _, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if turnCount != 1 {
+		t.Errorf("turnCount: got %d, want 1 (bash output should not count as a turn)", turnCount)
+	}
+}
+
+func TestQuickScan_CountsBashInput(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bash-input.jsonl")
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"role":"user","content":"hello"},"isSidechain":false}
+{"type":"user","parentUuid":"u1","uuid":"u2","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"role":"user","content":"<bash-input>git push</bash-input>"},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	_, _, _, _, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if turnCount != 2 {
+		t.Errorf("turnCount: got %d, want 2 (bash input should count as a turn)", turnCount)
+	}
+}
+
+func TestQuickScan_CountsSlashCommands(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "slash-cmd.jsonl")
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"role":"user","content":"hello"},"isSidechain":false}
+{"type":"user","parentUuid":"u1","uuid":"u2","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"role":"user","content":"<command-message>commit</command-message>\n<command-name>/commit</command-name>"},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	_, _, _, _, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if turnCount != 2 {
+		t.Errorf("turnCount: got %d, want 2 (slash commands should count as a turn)", turnCount)
+	}
+}
+
+func TestQuickScan_SkipsToolResults(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tool-results.jsonl")
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"role":"user","content":"hello"},"isSidechain":false}
+{"type":"user","parentUuid":"u1","uuid":"u2","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"role":"user","content":[{"tool_use_id":"tool1","type":"tool_result","content":"result text"}]},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	_, _, _, _, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if turnCount != 1 {
+		t.Errorf("turnCount: got %d, want 1 (tool results should not count as turns)", turnCount)
+	}
+}
+
+func TestQuickScan_CountsTextImageArray(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "text-image.jsonl")
+
+	content := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:00:00.000Z","message":{"role":"user","content":"hello"},"isSidechain":false}
+{"type":"user","parentUuid":"u1","uuid":"u2","sessionId":"s1","timestamp":"2026-02-13T12:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"Look at this"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"abc"}}]},"isSidechain":false}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	_, _, _, _, turnCount, err := QuickScan(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if turnCount != 2 {
+		t.Errorf("turnCount: got %d, want 2 (text+image array should count as a turn)", turnCount)
 	}
 }
 

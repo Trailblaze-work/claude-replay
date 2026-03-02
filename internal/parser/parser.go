@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"io"
 	"os"
@@ -70,13 +71,14 @@ func QuickScan(path string) (slug, model string, firstTime, lastTime string, tur
 	scanner.Buffer(make([]byte, 0, 1024*1024), 16*1024*1024)
 
 	type quickRecord struct {
-		Type      string    `json:"type"`
-		Slug      string    `json:"slug"`
-		Timestamp string    `json:"timestamp"`
-		Subtype   string    `json:"subtype"`
+		Type      string `json:"type"`
+		Slug      string `json:"slug"`
+		Timestamp string `json:"timestamp"`
+		Subtype   string `json:"subtype"`
+		IsMeta    bool   `json:"isMeta"`
 		Message   *struct {
-			Role    string `json:"role"`
-			Model   string `json:"model"`
+			Role    string          `json:"role"`
+			Model   string          `json:"model"`
 			Content json.RawMessage `json:"content"`
 		} `json:"message"`
 	}
@@ -104,9 +106,30 @@ func QuickScan(path string) (slug, model string, firstTime, lastTime string, tur
 		}
 
 		if rec.Type == "user" && rec.Message != nil && rec.Message.Role == "user" {
-			// Check if it's a text message (not tool result)
-			if len(rec.Message.Content) > 0 && rec.Message.Content[0] == '"' {
-				turnCount++
+			// Skip meta messages (expanded skill prompts)
+			if rec.IsMeta {
+				continue
+			}
+			if len(rec.Message.Content) > 0 {
+				switch rec.Message.Content[0] {
+				case '"':
+					// Plain string content — skip bash output
+					if bytes.Contains(rec.Message.Content, []byte("bash-stdout")) ||
+						bytes.Contains(rec.Message.Content, []byte("bash-stderr")) {
+						continue
+					}
+					turnCount++
+				case '[':
+					// Array content — check if it's tool results vs text+image
+					var items []struct {
+						Type string `json:"type"`
+					}
+					if err := json.Unmarshal(rec.Message.Content, &items); err == nil && len(items) > 0 {
+						if items[0].Type != "tool_result" {
+							turnCount++
+						}
+					}
+				}
 			}
 		}
 
