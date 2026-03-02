@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -97,15 +98,36 @@ func GenerateCast(sess *session.Session, opts Options) error {
 	return nil
 }
 
-// ConvertToGif converts a .cast file to .gif using agg if available.
+// ConvertToGif converts a .cast file to .gif using agg.
 func ConvertToGif(castPath, gifPath string) error {
-	// Check if agg is available
-	return fmt.Errorf("GIF conversion requires 'agg' (https://github.com/asciinema/agg). Install with: cargo install agg")
+	aggPath, err := exec.LookPath("agg")
+	if err != nil {
+		return fmt.Errorf("GIF conversion requires 'agg' (https://github.com/asciinema/agg). Install with: cargo install agg")
+	}
+	cmd := exec.Command(aggPath, castPath, gifPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("agg failed: %w", err)
+	}
+	return nil
 }
 
-// ConvertToMP4 converts a .gif to .mp4 using ffmpeg if available.
+// ConvertToMP4 converts a .gif to .mp4 using ffmpeg.
 func ConvertToMP4(gifPath, mp4Path string) error {
-	return fmt.Errorf("MP4 conversion requires 'ffmpeg'. Install with: brew install ffmpeg")
+	ffmpegPath, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		return fmt.Errorf("MP4 conversion requires 'ffmpeg'. Install with: brew install ffmpeg")
+	}
+	cmd := exec.Command(ffmpegPath, "-i", gifPath, "-movflags", "faststart",
+		"-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+		"-y", mp4Path)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("ffmpeg failed: %w", err)
+	}
+	return nil
 }
 
 // FormatCastInfo returns info about a generated .cast file.

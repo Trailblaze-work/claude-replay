@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -81,17 +82,27 @@ var exportCmd = &cobra.Command{
 		// Convert if needed
 		if opts.Format == "gif" {
 			gifPath := exportOutput
+			fmt.Printf("  Converting to GIF...\n")
 			if err := export.ConvertToGif(castPath, gifPath); err != nil {
 				fmt.Printf("  Note: %v\n", err)
 				fmt.Printf("  You can convert manually: agg %s %s\n", castPath, gifPath)
+			} else {
+				fmt.Printf("  GIF: %s\n", gifPath)
+				os.Remove(castPath)
 			}
 		} else if opts.Format == "mp4" {
 			gifPath := strings.TrimSuffix(exportOutput, ".mp4") + ".gif"
+			fmt.Printf("  Converting to GIF...\n")
 			if err := export.ConvertToGif(castPath, gifPath); err != nil {
 				fmt.Printf("  Note: %v\n", err)
 			} else {
+				fmt.Printf("  Converting to MP4...\n")
 				if err := export.ConvertToMP4(gifPath, exportOutput); err != nil {
 					fmt.Printf("  Note: %v\n", err)
+				} else {
+					fmt.Printf("  MP4: %s\n", exportOutput)
+					os.Remove(castPath)
+					os.Remove(gifPath)
 				}
 			}
 		}

@@ -45,15 +45,25 @@ claude-replay list                    # list all projects
 claude-replay list <project-name>     # list sessions in a project
 ```
 
-### Export as asciinema recording
+### Export as recording
 
 ```bash
-claude-replay export <session> -o session.cast
+claude-replay export <session> -o session.cast              # asciinema .cast
+claude-replay export <session> --format gif -o demo.gif     # animated GIF (requires agg)
+claude-replay export <session> --format mp4 -o demo.mp4     # MP4 video (requires agg + ffmpeg)
 claude-replay export <session> --mode realtime -o session.cast
-claude-replay export <session> --mode fast -o session.cast
+claude-replay export <session> --width 120 --height 40      # custom dimensions
 ```
 
-Play the recording with `asciinema play session.cast` or upload to [asciinema.org](https://asciinema.org).
+Play `.cast` files with `asciinema play session.cast` or upload to [asciinema.org](https://asciinema.org).
+
+**Output formats:**
+
+| Format | Requires | Description |
+|--------|----------|-------------|
+| `cast` (default) | — | Asciinema v2 recording |
+| `gif` | [agg](https://github.com/asciinema/agg) | Animated GIF |
+| `mp4` | agg + ffmpeg | MP4 video |
 
 **Timing modes:**
 
@@ -79,10 +89,9 @@ Play the recording with `asciinema play session.cast` or upload to [asciinema.or
 |-----|--------|
 | `←/h` `→/l` | Previous/next turn |
 | `Home/g` `End/G` | First/last turn |
-| `↑/k` `↓/j` | Scroll within turn |
-| `PgUp` `PgDn` | Page up/down |
-| `t` | Toggle thinking blocks |
-| `Enter` | Expand/collapse tool details |
+| `↑/k` `↓/j` | Previous/next section |
+| `PgUp/Ctrl+u` `PgDn/Ctrl+d` | Page up/down |
+| `Ctrl+o` | Expand/collapse tool details |
 | `Space` | Toggle autoplay |
 | `+/-` | Adjust autoplay speed |
 | `?` | Help overlay |
