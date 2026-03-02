@@ -1,0 +1,25 @@
+{
+  "session_id": "ffbddc5b-9caa-4df8-91d9-714dbbf508fb",
+  "slug": "drifting-fluttering-eclipse",
+  "started": "2026-03-02T09:58:43.104Z",
+  "last_updated": "2026-03-02T10:04:00.143Z",
+  "models": [
+    "claude-opus-4-6"
+  ],
+  "client_version": "2.1.63",
+  "git_branch": "main",
+  "user_turns": 49,
+  "assistant_turns": 83,
+  "commits": [],
+  "tools_used": {
+    "Read": 14,
+    "Glob": 2,
+    "TaskCreate": 5,
+    "TaskUpdate": 10,
+    "Edit": 12,
+    "Grep": 1,
+    "Bash": 3,
+    "Agent": 1
+  },
+  "compressed_size": 71145
+}
