@@ -1,0 +1,22 @@
+{
+  "session_id": "0944f079-265a-42e8-8ba5-0c29bf49e71a",
+  "slug": "lucky-yawning-giraffe",
+  "started": "2026-03-02T12:42:35.826Z",
+  "last_updated": "2026-03-02T12:48:20.091Z",
+  "models": [
+    "claude-opus-4-6"
+  ],
+  "client_version": "2.1.63",
+  "git_branch": "main",
+  "user_turns": 43,
+  "assistant_turns": 71,
+  "commits": [],
+  "tools_used": {
+    "Bash": 27,
+    "Agent": 1,
+    "Read": 7,
+    "Edit": 6,
+    "Write": 1
+  },
+  "compressed_size": 75334
+}
