@@ -242,6 +242,102 @@ func TestCommandName_RegularMessage(t *testing.T) {
 	}
 }
 
+func TestBashInput(t *testing.T) {
+	input := `{"type":"user","parentUuid":"p1","uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":"<bash-input>git push</bash-input>"},"isSidechain":false}`
+
+	records, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	msg, err := records[0].ParseUserMessage()
+	if err != nil {
+		t.Fatalf("ParseUserMessage error: %v", err)
+	}
+
+	if !msg.IsBashInput() {
+		t.Error("expected IsBashInput to return true")
+	}
+	if msg.IsBashOutput() {
+		t.Error("expected IsBashOutput to return false")
+	}
+	if cmd := msg.ParseBashInput(); cmd != "git push" {
+		t.Errorf("ParseBashInput: got %q, want %q", cmd, "git push")
+	}
+}
+
+func TestBashOutput(t *testing.T) {
+	input := `{"type":"user","parentUuid":"p1","uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":"<bash-stdout>Everything up-to-date</bash-stdout><bash-stderr></bash-stderr>"},"isSidechain":false}`
+
+	records, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	msg, err := records[0].ParseUserMessage()
+	if err != nil {
+		t.Fatalf("ParseUserMessage error: %v", err)
+	}
+
+	if !msg.IsBashOutput() {
+		t.Error("expected IsBashOutput to return true")
+	}
+	if msg.IsBashInput() {
+		t.Error("expected IsBashInput to return false")
+	}
+
+	stdout, stderr := msg.ParseBashOutput()
+	if stdout != "Everything up-to-date" {
+		t.Errorf("stdout: got %q, want %q", stdout, "Everything up-to-date")
+	}
+	if stderr != "" {
+		t.Errorf("stderr: got %q, want empty", stderr)
+	}
+}
+
+func TestBashOutput_WithStderr(t *testing.T) {
+	input := `{"type":"user","parentUuid":"p1","uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":"<bash-stdout>partial output</bash-stdout><bash-stderr>error: something failed</bash-stderr>"},"isSidechain":false}`
+
+	records, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	msg, err := records[0].ParseUserMessage()
+	if err != nil {
+		t.Fatalf("ParseUserMessage error: %v", err)
+	}
+
+	stdout, stderr := msg.ParseBashOutput()
+	if stdout != "partial output" {
+		t.Errorf("stdout: got %q, want %q", stdout, "partial output")
+	}
+	if stderr != "error: something failed" {
+		t.Errorf("stderr: got %q, want %q", stderr, "error: something failed")
+	}
+}
+
+func TestBashInput_RegularMessage(t *testing.T) {
+	input := `{"type":"user","parentUuid":null,"uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":"hello world"},"isSidechain":false}`
+
+	records, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	msg, err := records[0].ParseUserMessage()
+	if err != nil {
+		t.Fatalf("ParseUserMessage error: %v", err)
+	}
+
+	if msg.IsBashInput() {
+		t.Error("expected IsBashInput to return false for regular message")
+	}
+	if msg.IsBashOutput() {
+		t.Error("expected IsBashOutput to return false for regular message")
+	}
+}
+
 func TestParse_IsMeta(t *testing.T) {
 	input := `{"type":"user","parentUuid":"p1","uuid":"u1","sessionId":"s1","timestamp":"2026-02-13T12:18:22.000Z","message":{"role":"user","content":[{"type":"text","text":"expanded skill prompt here"}]},"isMeta":true,"isSidechain":false}`
 

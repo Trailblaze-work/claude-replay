@@ -114,7 +114,53 @@ func segmentTurns(records []parser.Record, sess *Session) []Turn {
 				continue
 			}
 
-			if userMsg.IsToolResults() {
+			if userMsg.IsBashOutput() {
+				// Shell escape output (!cmd) belongs to the current turn
+				if currentTurn != nil {
+					stdout, stderr := userMsg.ParseBashOutput()
+					output := stdout
+					if stderr != "" {
+						if output != "" {
+							output += "\n"
+						}
+						output += stderr
+					}
+					if output != "" {
+						currentTurn.Blocks = append(currentTurn.Blocks, Block{
+							Type: BlockText,
+							Text: output,
+						})
+					}
+				}
+			} else if userMsg.IsBashInput() {
+				// Shell escape command (!cmd) starts a new turn
+				cmd := userMsg.ParseBashInput()
+
+				if currentTurn != nil && pendingDuration > 0 {
+					currentTurn.Duration = pendingDuration
+					pendingDuration = 0
+				}
+				if currentTurn != nil {
+					turns = append(turns, *currentTurn)
+				}
+
+				turnNum++
+				currentTurn = &Turn{
+					Number:    turnNum,
+					UserText:  "!" + cmd,
+					Timestamp: rec.Timestamp,
+					CWD:       rec.CWD,
+					GitBranch: rec.GitBranch,
+					Slug:      rec.Slug,
+				}
+
+				if sess.CWD == "" {
+					sess.CWD = rec.CWD
+				}
+				if sess.GitBranch == "" {
+					sess.GitBranch = rec.GitBranch
+				}
+			} else if userMsg.IsToolResults() {
 				// Tool results belong to the current turn
 				if currentTurn != nil {
 					results, err := userMsg.ParseToolResults()

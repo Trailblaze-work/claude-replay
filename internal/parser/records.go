@@ -150,3 +150,38 @@ func (msg *UserMessage) CommandName() (string, bool) {
 	}
 	return "", false
 }
+
+var bashInputRe = regexp.MustCompile(`^<bash-input>([\s\S]*)</bash-input>$`)
+var bashStdoutRe = regexp.MustCompile(`<bash-stdout>([\s\S]*?)</bash-stdout>`)
+var bashStderrRe = regexp.MustCompile(`<bash-stderr>([\s\S]*?)</bash-stderr>`)
+
+// IsBashInput returns true if the message is a shell escape command (!cmd).
+func (msg *UserMessage) IsBashInput() bool {
+	return bashInputRe.MatchString(msg.UserText())
+}
+
+// ParseBashInput extracts the command from a <bash-input> message.
+func (msg *UserMessage) ParseBashInput() string {
+	if m := bashInputRe.FindStringSubmatch(msg.UserText()); len(m) == 2 {
+		return m[1]
+	}
+	return ""
+}
+
+// IsBashOutput returns true if the message contains <bash-stdout> or <bash-stderr> tags.
+func (msg *UserMessage) IsBashOutput() bool {
+	text := msg.UserText()
+	return bashStdoutRe.MatchString(text) || bashStderrRe.MatchString(text)
+}
+
+// ParseBashOutput extracts stdout and stderr from a bash output message.
+func (msg *UserMessage) ParseBashOutput() (stdout, stderr string) {
+	text := msg.UserText()
+	if m := bashStdoutRe.FindStringSubmatch(text); len(m) == 2 {
+		stdout = m[1]
+	}
+	if m := bashStderrRe.FindStringSubmatch(text); len(m) == 2 {
+		stderr = m[1]
+	}
+	return
+}
