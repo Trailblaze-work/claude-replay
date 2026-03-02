@@ -5,9 +5,18 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 	"github.com/Trailblaze-work/claude-replay/internal/session"
 )
+
+func init() {
+	// Force TrueColor to ensure hex colors render accurately.
+	// Without this, lipgloss may fall back to ANSI256 which
+	// approximates colors poorly (e.g. green strings look yellow).
+	lipgloss.SetColorProfile(termenv.TrueColor)
+}
 
 var (
 	claudeDir string

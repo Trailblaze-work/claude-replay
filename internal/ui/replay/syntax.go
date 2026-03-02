@@ -8,18 +8,35 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// syntaxColors maps chroma token types to foreground colors matching
-// Claude Code's diff highlighting: keywords magenta, strings green,
-// comments grey, everything else uses the default diff foreground.
+// syntaxColors maps chroma token types to foreground colors extracted
+// from Claude Code's diff rendering, brightened ~20% to match CC's
+// vivid appearance on colored diff backgrounds.
 var syntaxColors = map[chroma.TokenType]lipgloss.Color{
-	chroma.Keyword:            lipgloss.Color("#C678DD"), // magenta/pink
-	chroma.KeywordDeclaration: lipgloss.Color("#C678DD"),
-	chroma.KeywordNamespace:   lipgloss.Color("#C678DD"),
-	chroma.KeywordType:        lipgloss.Color("#C678DD"),
-	chroma.KeywordConstant:    lipgloss.Color("#D19A66"), // amber
-	chroma.LiteralString:      lipgloss.Color("#98C379"), // green
-	chroma.LiteralNumber:      lipgloss.Color("#D19A66"), // amber
-	chroma.Comment:            lipgloss.Color("#5C6370"), // grey
+	// Keywords: purple/magenta
+	chroma.Keyword:            lipgloss.Color("#E09EFF"),
+	chroma.KeywordDeclaration: lipgloss.Color("#E09EFF"),
+	chroma.KeywordNamespace:   lipgloss.Color("#E09EFF"),
+	chroma.KeywordType:        lipgloss.Color("#E09EFF"),
+	chroma.KeywordReserved:    lipgloss.Color("#E09EFF"),
+	chroma.KeywordPseudo:      lipgloss.Color("#E09EFF"),
+	chroma.OperatorWord:       lipgloss.Color("#E09EFF"),
+
+	// Strings: warm yellow
+	chroma.LiteralString: lipgloss.Color("#FFE4A4"),
+
+	// String escapes: cyan
+	chroma.LiteralStringEscape: lipgloss.Color("#80DCE8"),
+
+	// Numbers / constants: amber
+	chroma.LiteralNumber:   lipgloss.Color("#F2BE88"),
+	chroma.KeywordConstant: lipgloss.Color("#F2BE88"),
+
+	// Function names: blue
+	chroma.NameFunction: lipgloss.Color("#8ED0FF"),
+	chroma.NameBuiltin:  lipgloss.Color("#8ED0FF"),
+
+	// Comments: grey
+	chroma.Comment: lipgloss.Color("#8A949E"),
 }
 
 // tokenColor returns the foreground color for a chroma token type,
